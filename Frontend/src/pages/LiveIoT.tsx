@@ -1,27 +1,23 @@
-
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { simulationAPI } from '../services/api';
 
-export default function Simulation() {
+export default function LiveIoT() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
   const [rawJson, setRawJson] = useState(
     JSON.stringify(
       {
-        flow_rate: 1.0,
-        pipe_radius: 0.25,
-        viscosity: 1.0,
+        sensor_id: 'demo-001',
+        timestamp: new Date().toISOString(),
+        pressure: 101.3,
+        temperature: 25.0,
+        flow_rate: 1.2,
       },
       null,
       2,
     ),
   );
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
 
-  const parsedParameters = useMemo(() => {
+  const parsed = useMemo(() => {
     try {
       return JSON.parse(rawJson);
     } catch {
@@ -29,40 +25,12 @@ export default function Simulation() {
     }
   }, [rawJson]);
 
-  const submit = async () => {
-    setError(null);
-    setResult(null);
-
-    if (!name.trim()) {
-      setError('Please enter a simulation name.');
-      return;
-    }
-
-    if (!parsedParameters) {
-      setError('Parameters must be valid JSON.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const response = await simulationAPI.create({
-        name: name.trim(),
-        parameters: parsedParameters,
-      });
-      setResult(response.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Failed to run simulation.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div style={styles.container}>
       <nav style={styles.nav}>
         <div style={styles.navLeft}>
           <h1 style={styles.logo}>SmartTracker</h1>
-          <span style={styles.badge}>Simulation • Raw Inputs</span>
+          <span style={styles.badge}>Live IoT • Sensor Data</span>
         </div>
         <button onClick={() => navigate('/dashboard')} style={styles.backButton}>
           Back to Dashboard
@@ -71,49 +39,34 @@ export default function Simulation() {
 
       <main style={styles.main}>
         <div style={styles.card}>
-          <h2 style={styles.title}>Run Simulation</h2>
+          <h2 style={styles.title}>Live IoT Sensor Data</h2>
           <p style={styles.subtitle}>
-            Provide raw input values as JSON. This will be sent to the backend `POST /simulations`.
+            This project currently has no backend endpoint for live sensor streaming. Use this page as the place to wire
+            MQTT/WebSocket/HTTP ingestion later. For now, you can paste a sample sensor JSON payload to preview what the UI
+            would display.
           </p>
 
-          <div style={styles.formRow}>
-            <label style={styles.label}>Simulation name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Baseline Run"
-              style={styles.input}
-            />
+          <div style={styles.statusRow}>
+            <div style={styles.statusDot} />
+            <div style={styles.statusText}>Not connected</div>
           </div>
 
           <div style={styles.formRow}>
-            <label style={styles.label}>Raw parameters (JSON)</label>
+            <label style={styles.label}>Sensor payload (JSON)</label>
             <textarea
               value={rawJson}
               onChange={(e) => setRawJson(e.target.value)}
               style={styles.textarea}
               spellCheck={false}
             />
-            <div style={styles.hint}>
-              {parsedParameters ? 'JSON looks valid.' : 'Invalid JSON.'}
-            </div>
-          </div>
-
-          {error ? <div style={styles.error}>{error}</div> : null}
-
-          <div style={styles.actions}>
-            <button onClick={submit} style={styles.primaryButton} disabled={submitting}>
-              {submitting ? 'Running...' : 'Run'}
-            </button>
+            <div style={styles.hint}>{parsed ? 'JSON looks valid.' : 'Invalid JSON.'}</div>
           </div>
         </div>
 
-        {result ? (
-          <div style={styles.card}>
-            <h3 style={styles.sectionTitle}>Latest Result</h3>
-            <pre style={styles.pre}>{JSON.stringify(result, null, 2)}</pre>
-          </div>
-        ) : null}
+        <div style={styles.card}>
+          <h3 style={styles.sectionTitle}>Preview</h3>
+          <pre style={styles.pre}>{JSON.stringify(parsed ?? { error: 'Invalid JSON' }, null, 2)}</pre>
+        </div>
       </main>
     </div>
   );
@@ -150,8 +103,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '12px',
     padding: '6px 10px',
     borderRadius: '999px',
-    backgroundColor: '#eef2ff',
-    color: '#3949ab',
+    backgroundColor: '#e8f5e9',
+    color: '#2e7d32',
     fontWeight: 700,
   },
   backButton: {
@@ -183,7 +136,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   subtitle: {
     fontSize: '14px',
-    margin: '0 0 22px 0',
+    margin: '0 0 16px 0',
     color: '#6c757d',
     lineHeight: 1.6,
   },
@@ -193,8 +146,29 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: '0 0 12px 0',
     color: '#1a1a1a',
   },
-  formRow: {
+  statusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #e9ecef',
     marginBottom: '18px',
+  },
+  statusDot: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '999px',
+    backgroundColor: '#f44336',
+  },
+  statusText: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  formRow: {
+    marginBottom: 0,
   },
   label: {
     display: 'block',
@@ -203,17 +177,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#1a1a1a',
     marginBottom: '8px',
   },
-  input: {
-    width: '100%',
-    padding: '12px 14px',
-    border: '1px solid #dee2e6',
-    borderRadius: '10px',
-    fontSize: '14px',
-    outline: 'none',
-  },
   textarea: {
     width: '100%',
-    minHeight: '240px',
+    minHeight: '220px',
     padding: '12px 14px',
     border: '1px solid #dee2e6',
     borderRadius: '10px',
@@ -227,31 +193,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '12px',
     color: '#6c757d',
   },
-  actions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginTop: '10px',
-  },
-  primaryButton: {
-    padding: '12px 18px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 800,
-  },
-  error: {
-    padding: '12px 14px',
-    borderRadius: '10px',
-    backgroundColor: '#ffebee',
-    color: '#c62828',
-    border: '1px solid #ffcdd2',
-    fontSize: '13px',
-    fontWeight: 600,
-    marginBottom: '10px',
-  },
   pre: {
     margin: 0,
     padding: '14px',
@@ -263,4 +204,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.5,
   },
 };
-

@@ -123,6 +123,32 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      <footer style={styles.footer}>
+        <div style={styles.footerInner}>
+          <div style={styles.footerSection}>
+            <div style={styles.footerSectionHeader}>
+              <div style={styles.footerSectionTitle}>Simulation (Raw Inputs)</div>
+              <div style={styles.footerSectionSubtitle}>Run simulation using manual/raw parameter values</div>
+            </div>
+            <button onClick={() => navigate('/simulation')} style={styles.footerButton}>
+              Open Simulation
+            </button>
+          </div>
+
+          <div style={styles.footerDivider} />
+
+          <div style={styles.footerSection}>
+            <div style={styles.footerSectionHeader}>
+              <div style={styles.footerSectionTitle}>Live IoT Sensor Data</div>
+              <div style={styles.footerSectionSubtitle}>Use real sensor feed (or paste sensor JSON for now)</div>
+            </div>
+            <button onClick={() => navigate('/iot-live')} style={styles.footerButtonAlt}>
+              Open Live IoT
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -130,6 +156,8 @@ export default function Dashboard() {
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
     backgroundColor: '#f8f9fa',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
@@ -179,9 +207,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: '600',
   },
   main: {
+    flex: 1,
     padding: '40px',
     maxWidth: '1400px',
     margin: '0 auto',
+    width: '100%',
   },
   header: {
     display: 'flex',
@@ -300,5 +330,67 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '12px',
     fontSize: '12px',
     fontWeight: '600',
+  },
+
+  footer: {
+    backgroundColor: 'white',
+    borderTop: '1px solid #e9ecef',
+    padding: '20px 40px',
+  },
+  footerInner: {
+    maxWidth: '1400px',
+    margin: '0 auto',
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
+    gap: '24px',
+    alignItems: 'center',
+  },
+  footerDivider: {
+    width: '1px',
+    height: '52px',
+    backgroundColor: '#e9ecef',
+    justifySelf: 'center',
+  },
+  footerSection: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  footerSectionHeader: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  footerSectionTitle: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  footerSectionSubtitle: {
+    fontSize: '12px',
+    color: '#6c757d',
+  },
+  footerButton: {
+    padding: '10px 14px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
+  },
+  footerButtonAlt: {
+    padding: '10px 14px',
+    backgroundColor: '#1a1a1a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
   },
 };
