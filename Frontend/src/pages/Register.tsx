@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
@@ -111,13 +113,10 @@ const styles = `
     .rp-form-panel { padding:1.5rem 1rem; }
     .rp-card { padding:1.5rem 1.25rem; }
     .rp-row { grid-template-columns:1fr; }
-    .rp-plans { grid-template-columns:1fr; }
     .rp-hero { padding:1.5rem 1rem; }
     .rp-plan-preview { flex-direction:column; }
   }
 `;
-
-type Plan = "free" | "pro" | "enterprise";
 
 function getStrength(val: string): { score: number; hint: string } {
   if (!val) return { score: 0, hint: "Use 8+ chars, numbers & symbols" };
@@ -131,19 +130,54 @@ function getStrength(val: string): { score: number; hint: string } {
 }
 
 export default function RegisterPage() {
-  const [fname, setFname] = useState("");
-  const [lname, setLname] = useState("");
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [purpose, setPurpose] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [plan, setPlan] = useState<Plan>("free");
   const [terms, setTerms] = useState(false);
-  const [updates, setUpdates] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const { score, hint } = getStrength(password);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!terms) {
+      setError("Please accept the terms and conditions");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authAPI.register({
+        username,
+        email,
+        password,
+        purpose: purpose || undefined,
+      });
+      
+      // Auto-login after registration
+      const loginResponse = await authAPI.login(username, password);
+      localStorage.setItem("token", loginResponse.data.access_token);
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -169,7 +203,7 @@ export default function RegisterPage() {
 
             {/* Steps */}
             <div className="rp-steps">
-              {[["1","Account"],["2","Profile"],["3","Plan"]].map(([n,l],i) => (
+              {[["1","Account"],["2","Details"],["3","Done"]].map(([n,l],i) => (
                 <div className={`rp-step${i===0?" active":""}`} key={n}>
                   <div className="rp-step-circle">{n}</div>
                   <span className="rp-step-name">{l}</span>
@@ -177,26 +211,22 @@ export default function RegisterPage() {
               ))}
             </div>
 
-            <form onSubmit={(e) => e.preventDefault()}>
-              {/* Name row */}
-              <div className="rp-row">
-                <div className="rp-fg">
-                  <label className="rp-label" htmlFor="rp-fname">First Name</label>
-                  <div className="rp-iw">
-                    <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <input id="rp-fname" className="rp-input" type="text" placeholder="Jane" value={fname} onChange={e=>setFname(e.target.value)} />
-                  </div>
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div style={{ padding: '.75rem', marginBottom: '1rem', background: 'rgba(255,79,109,.15)', border: '1px solid rgba(255,79,109,.3)', borderRadius: '8px', color: '#ff4f6d', fontSize: '.85rem' }}>
+                  {error}
                 </div>
-                <div className="rp-fg">
-                  <label className="rp-label" htmlFor="rp-lname">Last Name</label>
-                  <div className="rp-iw">
-                    <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <input id="rp-lname" className="rp-input" type="text" placeholder="Smith" value={lname} onChange={e=>setLname(e.target.value)} />
-                  </div>
+              )}
+
+              {/* Username */}
+              <div className="rp-fg">
+                <label className="rp-label" htmlFor="rp-username">Username</label>
+                <div className="rp-iw">
+                  <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  <input id="rp-username" className="rp-input" type="text" placeholder="your_username" required
+                    value={username} onChange={e=>setUsername(e.target.value)} />
                 </div>
               </div>
 
@@ -207,18 +237,20 @@ export default function RegisterPage() {
                   <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                   </svg>
-                  <input id="rp-email" className="rp-input" type="email" placeholder="you@company.com" value={email} onChange={e=>setEmail(e.target.value)} />
+                  <input id="rp-email" className="rp-input" type="email" placeholder="you@example.com" required
+                    value={email} onChange={e=>setEmail(e.target.value)} />
                 </div>
               </div>
 
-              {/* Company */}
+              {/* Purpose (optional) */}
               <div className="rp-fg">
-                <label className="rp-label" htmlFor="rp-company">Company / Organization</label>
+                <label className="rp-label" htmlFor="rp-purpose">Purpose (Optional)</label>
                 <div className="rp-iw">
                   <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                   </svg>
-                  <input id="rp-company" className="rp-input" type="text" placeholder="Acme Corp" value={company} onChange={e=>setCompany(e.target.value)} />
+                  <input id="rp-purpose" className="rp-input" type="text" placeholder="Research, Education, etc."
+                    value={purpose} onChange={e=>setPurpose(e.target.value)} />
                 </div>
               </div>
 
@@ -229,7 +261,7 @@ export default function RegisterPage() {
                   <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                   </svg>
-                  <input id="rp-pass" className="rp-input" type={showPass?"text":"password"} placeholder="Min. 8 characters"
+                  <input id="rp-pass" className="rp-input" type={showPass?"text":"password"} placeholder="Min. 8 characters" required
                     value={password} onChange={e=>setPassword(e.target.value)} />
                   <button type="button" className="rp-eye" onClick={()=>setShowPass(!showPass)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -237,10 +269,14 @@ export default function RegisterPage() {
                     </svg>
                   </button>
                 </div>
-                <div className={`rp-strength${score>0?` s${score}`:""}`}>
-                  <span/><span/><span/><span/>
-                </div>
-                <p className="rp-hint">{hint}</p>
+                {password && (
+                  <>
+                    <div className={`rp-strength${score>0?` s${score}`:""}`}>
+                      <span/><span/><span/><span/>
+                    </div>
+                    <p className="rp-hint">{hint}</p>
+                  </>
+                )}
               </div>
 
               {/* Confirm */}
@@ -250,7 +286,7 @@ export default function RegisterPage() {
                   <svg className="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                   </svg>
-                  <input id="rp-confirm" className="rp-input" type={showConfirm?"text":"password"} placeholder="Repeat password"
+                  <input id="rp-confirm" className="rp-input" type={showConfirm?"text":"password"} placeholder="Repeat password" required
                     value={confirm} onChange={e=>setConfirm(e.target.value)} />
                   <button type="button" className="rp-eye" onClick={()=>setShowConfirm(!showConfirm)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -260,30 +296,15 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Plan */}
-              <div className="rp-fg">
-                <label className="rp-label">Choose Your Plan</label>
-                <div className="rp-plans">
-                  {([["free","Free","$0/mo"],["pro","Pro","$29/mo"],["enterprise","Enterprise","Custom"]] as const).map(([v,n,p])=>(
-                    <div key={v} className={`rp-plan${plan===v?" selected":""}`} onClick={()=>setPlan(v)}>
-                      <span className="rp-plan-name">{n}</span>
-                      <span className="rp-plan-price">{p}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Checkboxes */}
               <label className="rp-chk">
                 <input type="checkbox" checked={terms} onChange={e=>setTerms(e.target.checked)} />
                 I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
               </label>
-              <label className="rp-chk">
-                <input type="checkbox" checked={updates} onChange={e=>setUpdates(e.target.checked)} />
-                Send me product updates and tips (optional)
-              </label>
 
-              <button className="rp-btn" type="submit">Create Account →</button>
+              <button className="rp-btn" type="submit" disabled={loading}>
+                {loading ? "Creating Account..." : "Create Account →"}
+              </button>
             </form>
 
             <div className="rp-footer">

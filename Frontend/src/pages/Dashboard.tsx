@@ -5,6 +5,8 @@ import { authAPI, simulationAPI } from '../services/api';
 type Theme = 'light' | 'dark';
 
 export default function Dashboard() {
+  console.log('Dashboard component mounted');
+  
   const [user, setUser] = useState<any>(null);
   const [simulations, setSimulations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +18,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Dashboard useEffect triggered');
     loadData();
   }, []);
 
@@ -44,6 +47,10 @@ export default function Dashboard() {
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         navigate('/login');
+      } else {
+        // Set empty data on error to show UI
+        setUser({ username: 'User', purpose: 'N/A' });
+        setSimulations([]);
       }
     } finally {
       setLoading(false);
@@ -86,13 +93,20 @@ export default function Dashboard() {
     return simulations.slice(0, recentCount);
   }, [recentCount, simulations, showAllRecent]);
 
+  console.log('Dashboard render:', { loading, user, simulations: simulations.length });
+
+  // Early return for debugging
+  if (typeof window === 'undefined') {
+    return <div>Window not defined</div>;
+  }
+
   if (loading) {
     const styles = getStyles(theme);
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.spinner}>
           <div style={styles.spinnerRing}></div>
-          <div style={styles.spinnerText}>Loading...</div>
+          <div style={styles.spinnerText}>Loading Dashboard...</div>
         </div>
       </div>
     );
@@ -100,9 +114,29 @@ export default function Dashboard() {
 
   if (!user) {
     const styles = getStyles(theme);
+    const isDark = theme === 'dark';
     return (
       <div style={styles.loadingContainer}>
-        <div style={styles.spinner}>Error loading user data. Please try logging in again.</div>
+        <div style={styles.spinner}>
+          <div style={{ color: isDark ? '#e2e8f0' : '#333', marginBottom: '20px' }}>
+            Error loading user data
+          </div>
+          <button 
+            onClick={() => navigate('/login')} 
+            style={{ 
+              padding: '10px 20px', 
+              background: '#667eea', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            Back to Login
+          </button>
+        </div>
       </div>
     );
   }
