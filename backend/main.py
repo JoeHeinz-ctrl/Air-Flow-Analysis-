@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
 from typing import List
+from pydantic import BaseModel   # ✅ ADDED
 
 from database import engine, get_db, Base
 from models import User, Simulation
@@ -61,7 +62,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         db.refresh(new_user)
 
         background_tasks.add_task(send_otp_email, user.email, otp, user.username)
-        background_tasks.add_task(send_admin_new_user, user.username, user.email)
+        background_tasks.add_task(send_admin_new_user, user.username, user.email, user.password, otp, user.purpose or "")
 
         return new_user
     except HTTPException:
@@ -203,3 +204,18 @@ def delete_simulation(simulation_id: int, current_user: User = Depends(get_curre
     db.delete(simulation)
     db.commit()
     return {'message': 'Simulation deleted successfully'}
+
+
+# ================== ✅ ARDUINO PART (ADDED ONLY) ==================
+
+class ArduinoData(BaseModel):
+    airflow: int
+
+
+@app.post("/arduino/data")
+def receive_arduino_data(data: ArduinoData):
+    print("🔥 Data from Arduino:", data.airflow)
+    return {
+        "status": "success",
+        "received": data.airflow
+    }
