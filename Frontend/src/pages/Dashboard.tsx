@@ -147,6 +147,7 @@ export default function Dashboard() {
     <div style={styles.container}>
       <nav style={styles.nav}>
         <div style={styles.navLeft}>
+          <img src="/logo.png" alt="SmartTracker" style={{ width: '32px', height: '32px', objectFit: 'contain', flexShrink: 0 }} />
           <h1 style={styles.logo}>SmartTracker</h1>
           <span style={styles.badge}>Dashboard</span>
         </div>
