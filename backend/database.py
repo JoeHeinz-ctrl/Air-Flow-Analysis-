@@ -1,33 +1,28 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-SQLITE_URL = "sqlite:///./simulation.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def _try_postgres(url: str):
-    """Try to connect to Postgres. Returns engine if successful, None otherwise."""
-    try:
-        eng = create_engine(url, pool_pre_ping=True, connect_args={"connect_timeout": 5})
-        with eng.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return eng
-    except Exception as e:
-        print(f"[DB] Postgres unreachable ({e.__class__.__name__}). Falling back to SQLite.")
-        return None
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set. Please configure your .env file.")
 
-if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
-    engine = _try_postgres(DATABASE_URL) or create_engine(
-        SQLITE_URL, connect_args={"check_same_thread": False}
-    )
-else:
-    engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+if not DATABASE_URL.startswith("postgresql"):
+    raise ValueError("DATABASE_URL must be a PostgreSQL connection string starting with 'postgresql://'")
 
-db_type = "PostgreSQL" if "postgresql" in str(engine.url) else "SQLite"
-print(f"[DB] Connected using {db_type}")
+# Create PostgreSQL engine with connection pooling
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=3600
+)
+
+print(f"[DB] Connected to PostgreSQL via Supabase")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
